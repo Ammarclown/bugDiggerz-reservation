@@ -8,9 +8,15 @@ const reservationValidation = {
   */
   validateTicketReservationDto(reservation) {
     const schema = Joi.object().keys({
-      //email: Joi.string().required(),
+      email: Joi.string().required(),
       matchNumber: Joi.number().strict().required(),
       tickets,
+      card: Joi.object().keys({
+        number: Joi.string().required(),
+        expirationMonth: Joi.number().required(),
+        expirationYear: Joi.number().required(),
+        cvc: Joi.string().required(),
+      }).required().unknown(false),
     }).required().unknown(false);
     return schema.validate(reservation).error;
   },

@@ -3,100 +3,80 @@ const db = require('../connectors/conn');
 const { sendKafkaMessage } = require('../connectors/kafka');
 const { validateTicketReservationDto } = require('../validation/reservation');
 const messagesType = require('../constants/messages');
+const stripe = require('stripe')('sk_test_51MHGhECgTetkFohrisVduRDay98bJTxigceKg9rDzKgSj8rkB25Q4xyKYpD5FbPjljG4iAwp1emgp73Xu3os4MhP005TJUcLkA');
+
 
 module.exports = (app) => {
-  // Register HTTP endpoint to create new user
-  app.post('/reservation/pending', async (req, res) => {
-    // validate payload before proceeding with reservations
-    const validationError = validateTicketReservationDto(req.body);
-    if (validationError) {
-      return res.status(403).send(validationError.message);
-    }
-    // Send message indicating ticket is pending checkout
-    // so shop consumers can process message and call
-    // sp-shop-api to decrement available ticket count
-    await sendKafkaMessage(messagesType.TICKET_PENDING, {
-      meta: { action: messagesType.TICKET_PENDING},
-      body: { 
-        matchNumber: req.body.matchNumber,
-        tickets: req.body.tickets,
-      }
-    });
-
-    const ticketReservation = { id: v4(), ...req.body };
-    // const reservation = await db('reservations').insert(ticketReservation).returning('*');
-
-    // Send message indicating ticket sale is final
-
-    // Return success response to client
-    return res.json({
-      message: 'Ticket Pending Successful',
-      ...ticketReservation,
-    });
+  // HTTP endpoint to test health performance of service
+  app.get('/api/v1/health', async (req, res) => {
+    return res.send('Service Health');
   });
-  app.post('/reservation/reserved', async (req, res) => {
-    // validate payload before proceeding with reservations
-    const validationError = validateTicketReservationDto(req.body);
-    if (validationError) {
-      return res.status(403).send(validationError.message);
-    }
-    // Send message indicating ticket is pending checkout
-    // so shop consumers can process message and call
-    // sp-shop-api to decrement available ticket count
-    await sendKafkaMessage(messagesType.TICKET_RESERVED, {
-      meta: { action: messagesType.TICKET_RESERVED},
-      body: { 
-        matchNumber: req.body.matchNumber,
-        tickets: req.body.tickets,
+
+  // HTTP endpoint to create new user
+  app.post('/reservation', async (req, res) => {
+    try {
+      // validate payload before proceeding with reservations
+      const validationError = validateTicketReservationDto(req.body);
+      if (validationError) {
+        return res.status(403).send(validationError.message);
       }
-    });
-
-    // TODO: Perform Stripe Payment Flow
-    // TODO: Update master list to reflect ticket sale
-
-    // Persist ticket sale in database with a generated reference id so user can lookup ticket
-    const ticketReservation = { id: v4(), ...req.body };
-    // const reservation = await db('reservations').insert(ticketReservation).returning('*');
-
-    // Send message indicating ticket sale is final
-
-    // Return success response to client
-    return res.json({
-      message: 'Ticket Purchase Successful',
-      ...ticketReservation,
-    });
-  });
-  app.post('/reservation/cancelled', async (req, res) => {
-    // validate payload before proceeding with reservations
-    const validationError = validateTicketReservationDto(req.body);
-    if (validationError) {
-      return res.status(403).send(validationError.message);
-    }
-    // Send message indicating ticket is pending checkout
-    // so shop consumers can process message and call
-    // sp-shop-api to decrement available ticket count
-    await sendKafkaMessage(messagesType.TICKET_CANCELLED, {
-      meta: { action: messagesType.TICKET_CANCELLED},
-      body: { 
-        matchNumber: req.body.matchNumber,
-        tickets: req.body.tickets,
-      }
-    });
-
-    // TODO: Perform Stripe Payment Flow
-    // TODO: Update master list to reflect ticket sale
-
-    // Persist ticket sale in database with a generated reference id so user can lookup ticket
-    const ticketReservation = { id: v4(), ...req.body };
-    // const reservation = await db('reservations').insert(ticketReservation).returning('*');
-
-    // Send message indicating ticket sale is final
-
-    // Return success response to client
-    return res.json({
-      message: 'Ticket Cancellation Successful',
-      ...ticketReservation,
-    });
-  });
+      // Send message indicating ticket is pending checkout
+      // so shop consumers can process message and call
+      // sp-shop-api to decrement available ticket count
+      await sendKafkaMessage(messagesType.TICKET_PENDING, {
+        meta: { action: messagesType.TICKET_PENDING},
+        body: { 
+          matchNumber: req.body.matchNumber,
+          tickets: req.body.tickets,
+        }
+      });
   
+      // Perform Stripe Payment Flow
+      try {
+        const token = await stripe.tokens.create({
+          card: {
+            number: req.body.card.number,
+            exp_month: req.body.card.expirationMonth,
+            exp_year: req.body.card.expirationYear,
+            cvc: req.body.card.cvc,
+          },
+        });
+        await stripe.charges.create({
+          amount: req.body.tickets.quantity * req.body.tickets.price,
+          currency: 'usd',
+          source: token.id,
+          description: 'FIFA World Cup Ticket Reservation',
+        });
+        await sendKafkaMessage(messagesType.TICKET_RESERVED, {
+          meta: { action: messagesType.TICKET_RESERVED},
+          body: { 
+            matchNumber: req.body.matchNumber,
+            tickets: req.body.tickets,
+          }
+        });
+      } catch (stripeError) {
+        // Send cancellation message indicating ticket sale failed
+        await sendKafkaMessage(messagesType.TICKET_CANCELLED, {
+          meta: { action: messagesType.TICKET_CANCELLED},
+          body: { 
+            matchNumber: req.body.matchNumber,
+            tickets: req.body.tickets,
+          }
+        });
+        return res.status(400).send(`could not process payment: ${stripeError.message}`);
+      }
+      
+      // Persist ticket sale in database with a generated reference id so user can lookup ticket
+      const ticketReservation = { id: v4(), ...req.body };
+      // const reservation = await db('reservations').insert(ticketReservation).returning('*');
+  
+      // Return success response to client
+      return res.json({
+        message: 'Ticket Purchase Successful',
+        ...ticketReservation,
+      });
+    } catch (e) {
+      return res.status(400).send(e.message);
+    }
+  });
 };
