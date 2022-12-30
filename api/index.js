@@ -101,7 +101,7 @@ app.use((req, res, next) => {
 });
 
 // Create HTTP Server and Listen for Requests
-app.listen(4000, async (req, res) => {
+app.listen(3000, async (req, res) => {
   // Start Kafka Producer
   await startKafkaProducer();
 });
