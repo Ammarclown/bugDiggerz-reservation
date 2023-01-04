@@ -30,10 +30,12 @@ app.get('/api/health', async (req, res) => {
 
 // HTTP endpoint to create new user
 app.post('/api/reservation', async (req, res) => {
-  app.use(cors)
+  // app.use(cors)
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "X-Requested-With");
-  res.header('Access-Control-Allow-Headers', 'Content-Type');  try {
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('access-control-allow-methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+    try {
     // validate payload before proceeding with reservations
     const validationError = validateTicketReservationDto(req.body);
     if (validationError) {
