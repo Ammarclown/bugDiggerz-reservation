@@ -111,6 +111,9 @@ app.post('/api/reservation', async (req, res) => {
 });
 app.post('/api/reservation/reserve',async(req,res)=>{
   app.use(cors)
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "X-Requested-With");
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
   try {
     const token = await stripe.tokens.create({
       card: {
