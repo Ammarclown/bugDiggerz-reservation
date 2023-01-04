@@ -40,60 +40,117 @@ app.post('/api/reservation', async (req, res) => {
     });
 
     // Perform Stripe Payment Flow
-    try {
-      const token = await stripe.tokens.create({
-        card: {
-          number: req.body.card.number,
-          exp_month: req.body.card.expirationMonth,
-          exp_year: req.body.card.expirationYear,
-          cvc: req.body.card.cvc,
-        },
-      });
-      await stripe.charges.create({
-        amount: req.body.tickets.quantity * req.body.tickets.price,
-        currency: 'usd',
-        source: token.id,
-        description: 'FIFA World Cup Ticket Reservation',
-      });
-      await sendKafkaMessage(messagesType.TICKET_RESERVED, {
-        meta: { action: messagesType.TICKET_RESERVED },
-        body: {
-          matchNumber: req.body.matchNumber,
-          tickets: req.body.tickets,
-        }
-      });
-    } catch (stripeError) {
-      // Send cancellation message indicating ticket sale failed
-      await sendKafkaMessage(messagesType.TICKET_CANCELLED, {
-        meta: { action: messagesType.TICKET_CANCELLED },
-        body: {
-          matchNumber: req.body.matchNumber,
-          tickets: req.body.tickets,
-        }
-      });
-      return res.status(400).send(`could not process payment: ${stripeError.message}`);
-    }
+    // try {
+    //   const token = await stripe.tokens.create({
+    //     card: {
+    //       number: req.body.card.number,
+    //       exp_month: req.body.card.expirationMonth,
+    //       exp_year: req.body.card.expirationYear,
+    //       cvc: req.body.card.cvc,
+    //     },
+    //   });
+    //   await stripe.charges.create({
+    //     amount: req.body.tickets.quantity * req.body.tickets.price,
+    //     currency: 'usd',
+    //     source: token.id,
+    //     description: 'FIFA World Cup Ticket Reservation',
+    //   });
+    //   await sendKafkaMessage(messagesType.TICKET_RESERVED, {
+    //     meta: { action: messagesType.TICKET_RESERVED },
+    //     body: {
+    //       matchNumber: req.body.matchNumber,
+    //       tickets: req.body.tickets,
+    //     }
+    //   });
+    // } catch (stripeError) {
+    //   // Send cancellation message indicating ticket sale failed
+    //   await sendKafkaMessage(messagesType.TICKET_CANCELLED, {
+    //     meta: { action: messagesType.TICKET_CANCELLED },
+    //     body: {
+    //       matchNumber: req.body.matchNumber,
+    //       tickets: req.body.tickets,
+    //     }
+    //   });
+    //   return res.status(400).send(`could not process payment: ${stripeError.message}`);
+    // }
 
     // Persist ticket sale in database with a generated reference id so user can lookup ticket
-    const ticketReservation = {
-      id: v4(),
-      email: req.body.email,
-      matchNumber: req.body.matchNumber,
-      category: req.body.tickets.category,
-      quantity: req.body.tickets.quantity,
-      price: req.body.tickets.price,
-    };
+    // const ticketReservation = {
+    //   id: v4(),
+    //   email: req.body.email,
+    //   matchNumber: req.body.matchNumber,
+    //   category: req.body.tickets.category,
+    //   quantity: req.body.tickets.quantity,
+    //   price: req.body.tickets.price,
+    // };
     //await db('reservations').insert(ticketReservation);
 
     // Return success response to client
+    // return res.json({
+    //   message: 'Ticket Purchase Successful',
+    //   ...ticketReservation,
+    // });
     return res.json({
-      message: 'Ticket Purchase Successful',
-      ...ticketReservation,
-    });
+        message: 'Ticket PENDING Successful',
+        
+      });
   } catch (e) {
     return res.status(400).send(e.message);
   }
 });
+app.post('/api/reservation/reserve',async(req,res)=>{
+  try {
+    const token = await stripe.tokens.create({
+      card: {
+        number: req.body.card.number,
+        exp_month: req.body.card.expirationMonth,
+        exp_year: req.body.card.expirationYear,
+        cvc: req.body.card.cvc,
+      },
+    });
+    await stripe.charges.create({
+      amount: req.body.tickets.quantity * req.body.tickets.price,
+      currency: 'usd',
+      source: token.id,
+      description: 'FIFA World Cup Ticket Reservation',
+    });
+    await sendKafkaMessage(messagesType.TICKET_RESERVED, {
+      meta: { action: messagesType.TICKET_RESERVED },
+      body: {
+        matchNumber: req.body.matchNumber,
+        tickets: req.body.tickets,
+      }
+    });
+    return res.json({
+      message: 'Ticket Reservation Successful',
+    
+    });
+  }
+  catch (stripeError) {
+    // Send cancellation message indicating ticket sale failed
+    await sendKafkaMessage(messagesType.TICKET_CANCELLED, {
+      meta: { action: messagesType.TICKET_CANCELLED },
+      body: {
+        matchNumber: req.body.matchNumber,
+        tickets: req.body.tickets,
+      }
+    });
+    return res.status(400).send(`could not process payment: ${stripeError.message}`);
+  }
+
+
+})
+
+app.post('/api/reservation/cancel',async(req,res)=>{
+  await sendKafkaMessage(messagesType.TICKET_CANCELLED, {
+    meta: { action: messagesType.TICKET_CANCELLED },
+    body: {
+      matchNumber: req.body.matchNumber,
+      tickets: req.body.tickets,
+    }
+  });
+  return res.status(400).send(`could not process payment,process was cancelled`);
+})
 
 // If request doesn't match any of the above routes then return 404
 app.use((req, res, next) => {
