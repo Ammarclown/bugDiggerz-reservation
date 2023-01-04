@@ -110,6 +110,7 @@ app.post('/api/reservation', async (req, res) => {
   }
 });
 app.post('/api/reservation/reserve',async(req,res)=>{
+  app.use(cors)
   try {
     const token = await stripe.tokens.create({
       card: {
