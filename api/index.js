@@ -9,6 +9,8 @@ const { sendKafkaMessage } = require('../connectors/kafka');
 const { validateTicketReservationDto } = require('../validation/reservation');
 const messagesType = require('../constants/messages');
 const { startKafkaProducer } = require('../connectors/kafka');
+const cors = require('cors');
+app.use(cors())
 
 // Config setup to parse JSON payloads from HTTP POST request body
 app.use(express.json());
