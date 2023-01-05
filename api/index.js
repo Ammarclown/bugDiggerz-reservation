@@ -170,6 +170,10 @@ app.post('/api/reservation/cancel',async(req,res)=>{
       tickets: req.body.tickets,
     }
   });
+  return res.json({
+    message: 'Ticket CANCELLEATION Successful',
+  
+  });
   ;
 })
 
