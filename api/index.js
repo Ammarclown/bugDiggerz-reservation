@@ -59,26 +59,26 @@ app.post('/api/reservation', async (req, res) => {
     //   message: 'Ticket Purchase Successful',
     //   ...ticketReservation,
     // });
-    const ticketReservation = {
-      id: v4(),
-      email: req.body.email,
-      matchNumber: req.body.matchNumber,
-      category: req.body.tickets.category,
-      quantity: req.body.tickets.quantity,
-      price: req.body.tickets.price,
-      status:"PENDING"
-    };
-    await db.connectToServer(function(err){
-      let db_connect = db.getDb("worldcup22");
-      db_connect.collection("Reservations").insertOne(ticketReservation, function (err, res) {
-        if (err) throw err;
-        //response.json(res);
-      });
-      return res.json({
-        message: 'Ticket PENDING Successful',
+    // const ticketReservation = {
+    //   id: v4(),
+    //   email: req.body.email,
+    //   matchNumber: req.body.matchNumber,
+    //   category: req.body.tickets.category,
+    //   quantity: req.body.tickets.quantity,
+    //   price: req.body.tickets.price,
+    //   status:"PENDING"
+    // };
+    // await db.connectToServer(function(err){
+    //   let db_connect = db.getDb("worldcup22");
+    //   db_connect.collection("Reservations").insertOne(ticketReservation, function (err, res) {
+    //     if (err) throw err;
+    //     //response.json(res);
+    //   });
+    //   return res.json({
+    //     message: 'Ticket PENDING Successful',
         
-      });
-    })
+    //   });
+    // })
     // return res.json({
     //     message: 'Ticket PENDING Successful',
         
