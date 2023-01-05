@@ -4,7 +4,7 @@ const express = require('express');
 const app = express();
 const stripe = require('stripe')('sk_test_51MHGhECgTetkFohrisVduRDay98bJTxigceKg9rDzKgSj8rkB25Q4xyKYpD5FbPjljG4iAwp1emgp73Xu3os4MhP005TJUcLkA');
 const { v4 } = require('uuid');
-const dbo = require('../connectors/postgres');
+const db = require('../connectors/postgres');
 const { sendKafkaMessage } = require('../connectors/kafka');
 const { validateTicketReservationDto } = require('../validation/reservation');
 const messagesType = require('../constants/messages');
@@ -14,17 +14,16 @@ app.use(cors())
 
 // Config setup to parse JSON payloads from HTTP POST request body
 app.use(express.json());
-
-app.use(express.urlencoded({ extended: false }));
-
-// Register the api routes
-// HTTP endpoint to test health performance of service
 app.all('*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "X-Requested-With");
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   next();
 });
+app.use(express.urlencoded({ extended: false }));
+
+// Register the api routes
+// HTTP endpoint to test health performance of service
 app.get('/api/health', async (req, res) => {
   return res.send('Service Health');
 });
@@ -36,21 +35,6 @@ app.post('/api/reservation', async (req, res) => {
   res.header("Access-Control-Allow-Headers", "X-Requested-With");
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   res.header('access-control-allow-methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
-  await dbo.connectToServer(function(err){
-    let db_connect = dbo.getDb("worldcup22");
-    const ticketReservation = {
-      id: v4(),
-      email: req.body.email,
-      matchNumber: req.body.matchNumber,
-      category: req.body.tickets.category,
-      quantity: req.body.tickets.quantity,
-      price: req.body.tickets.price,
-    };
-    db_connect.collection("Reservations").insertOne(ticketReservation, function (err, response) {
-      if (err) throw err;
-      // res.json(response);
-    });
-  })
     try {
     // validate payload before proceeding with reservations
     const validationError = validateTicketReservationDto(req.body);
@@ -104,9 +88,16 @@ app.post('/api/reservation', async (req, res) => {
     // }
 
     // Persist ticket sale in database with a generated reference id so user can lookup ticket
-    
-    // await db('Reservations').insert(ticketReservation);
-    
+    const ticketReservation = {
+      id: v4(),
+      email: req.body.email,
+      matchNumber: req.body.matchNumber,
+      category: req.body.tickets.category,
+      quantity: req.body.tickets.quantity,
+      price: req.body.tickets.price,
+    };
+    //await db('reservations').insert(ticketReservation);
+
     // Return success response to client
     // return res.json({
     //   message: 'Ticket Purchase Successful',
@@ -126,10 +117,6 @@ app.post('/api/reservation/reserve',async(req,res)=>{
   res.header("Access-Control-Allow-Headers", "X-Requested-With");
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   try {
-    const validationError = validateTicketReservationDto(req.body);
-    if (validationError) {
-      return res.status(403).send(validationError.message);
-    }
     const token = await stripe.tokens.create({
       card: {
         number: req.body.card.number,
@@ -151,26 +138,10 @@ app.post('/api/reservation/reserve',async(req,res)=>{
         tickets: req.body.tickets,
       }
     });
-    await dbo.connectToServer(function(err){
-      let db_connect = dbo.getDb("worldcup22");
-      const ticketReservation = {
-        id: v4(),
-        email: req.body.email,
-        matchNumber: req.body.matchNumber,
-        category: req.body.tickets.category,
-        quantity: req.body.tickets.quantity,
-        price: req.body.tickets.price,
-      };
-      db_connect.collection("Reservations").insertOne(ticketReservation, function (err, response) {
-        if (err) throw err;
-        // res.json(response);
-      });
-    })
     return res.json({
       message: 'Ticket Reservation Successful',
     
     });
-    
   }
   catch (stripeError) {
     // Send cancellation message indicating ticket sale failed
@@ -188,10 +159,6 @@ app.post('/api/reservation/reserve',async(req,res)=>{
 })
 
 app.post('/api/reservation/cancel',async(req,res)=>{
-  app.use(cors)
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "X-Requested-With");
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
   await sendKafkaMessage(messagesType.TICKET_CANCELLED, {
     meta: { action: messagesType.TICKET_CANCELLED },
     body: {
