@@ -79,10 +79,10 @@ app.post('/api/reservation', async (req, res) => {
         
     //   });
     // })
-    // return res.json({
-    //     message: 'Ticket PENDING Successful',
+    return res.json({
+        message: 'Ticket PENDING Successful',
         
-    //   });
+      });
   } catch (e) {
     return res.status(400).send(e.message);
   }
