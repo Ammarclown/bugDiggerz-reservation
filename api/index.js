@@ -166,7 +166,7 @@ app.post('/api/reservation/cancel',async(req,res)=>{
       tickets: req.body.tickets,
     }
   });
-  return res.status(400).send(`could not process payment,process was cancelled`);
+  ;
 })
 
 // If request doesn't match any of the above routes then return 404
