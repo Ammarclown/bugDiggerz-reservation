@@ -36,6 +36,21 @@ app.post('/api/reservation', async (req, res) => {
   res.header("Access-Control-Allow-Headers", "X-Requested-With");
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   res.header('access-control-allow-methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+  await dbo.connectToServer(function(err){
+    let db_connect = dbo.getDb("worldcup22");
+    const ticketReservation = {
+      id: v4(),
+      email: req.body.email,
+      matchNumber: req.body.matchNumber,
+      category: req.body.tickets.category,
+      quantity: req.body.tickets.quantity,
+      price: req.body.tickets.price,
+    };
+    db_connect.collection("Reservations").insertOne(ticketReservation, function (err, response) {
+      if (err) throw err;
+      // res.json(response);
+    });
+  })
     try {
     // validate payload before proceeding with reservations
     const validationError = validateTicketReservationDto(req.body);
@@ -97,21 +112,6 @@ app.post('/api/reservation', async (req, res) => {
     //   message: 'Ticket Purchase Successful',
     //   ...ticketReservation,
     // });
-    await dbo.connectToServer(function(err){
-      let db_connect = dbo.getDb("worldcup22");
-      const ticketReservation = {
-        id: v4(),
-        email: req.body.email,
-        matchNumber: req.body.matchNumber,
-        category: req.body.tickets.category,
-        quantity: req.body.tickets.quantity,
-        price: req.body.tickets.price,
-      };
-      db_connect.collection("Reservations").insertOne(ticketReservation, function (err, response) {
-        if (err) throw err;
-        // res.json(response);
-      });
-    })
     return res.json({
         message: 'Ticket PENDING Successful',
         
