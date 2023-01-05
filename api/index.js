@@ -159,6 +159,10 @@ app.post('/api/reservation/reserve',async(req,res)=>{
 })
 
 app.post('/api/reservation/cancel',async(req,res)=>{
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "X-Requested-With");
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('access-control-allow-methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
   await sendKafkaMessage(messagesType.TICKET_CANCELLED, {
     meta: { action: messagesType.TICKET_CANCELLED },
     body: {
