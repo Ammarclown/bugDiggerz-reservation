@@ -59,7 +59,10 @@ app.post('/api/reservation', async (req, res) => {
     //   message: 'Ticket Purchase Successful',
     //   ...ticketReservation,
     // });
-    
+    return res.json({
+        message: 'Ticket PENDING Successful',
+        
+      });
   } catch (e) {
     return res.status(400).send(e.message);
   }
@@ -92,7 +95,10 @@ app.post('/api/reservation/reserve',async(req,res)=>{
       }
     });
  
- 
+ return res.json({
+        message: 'Ticket RESERVATION Successful',
+        
+      });
   }
   catch (stripeError) {
     // Send cancellation message indicating ticket sale failed
