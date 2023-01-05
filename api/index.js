@@ -51,25 +51,7 @@ app.post('/api/reservation', async (req, res) => {
         tickets: req.body.tickets,
       }
     });
-    const ticketReservation = {
-      id: v4(),
-      email: req.body.email,
-      matchNumber: req.body.matchNumber,
-      category: req.body.tickets.category,
-      quantity: req.body.tickets.quantity,
-      price: req.body.tickets.price,
-    };
-    await db.connectToServer(function(err){
-      let db_connect = db.getDb("worldcup22");
-      db_connect.collection("Reservations").insertOne(ticketReservation, function (err, res) {
-        if (err) throw err;
-        //response.json(res);
-      });
-      return res.json({
-        message: 'Ticket PENDING Successful',
-        
-      });
-    })
+ 
     //await db('reservations').insert(ticketReservation);
 
     // Return success response to client
@@ -109,10 +91,8 @@ app.post('/api/reservation/reserve',async(req,res)=>{
         tickets: req.body.tickets,
       }
     });
-    return res.json({
-      message: 'Ticket Reservation Successful',
-    
-    });
+ 
+ 
   }
   catch (stripeError) {
     // Send cancellation message indicating ticket sale failed
@@ -146,6 +126,52 @@ app.post('/api/reservation/cancel',async(req,res)=>{
   
   });
   ;
+})
+
+app.post('/api/reservation/add',async(req,res)=>{
+     const ticketReservation = {
+      id: v4(),
+      email: req.body.email,
+      matchNumber: req.body.matchNumber,
+      category: req.body.tickets.category,
+      quantity: req.body.tickets.quantity,
+      price: req.body.tickets.price,
+      status:"PENDING"
+    };
+    await db.connectToServer(function(err){
+      let db_connect = db.getDb("worldcup22");
+      db_connect.collection("Reservations").insertOne(ticketReservation, function (err, res) {
+        if (err) throw err;
+        //response.json(res);
+      });
+      return res.json({
+        message: 'Ticket PENDING Successful',
+        
+      });
+    })
+})
+
+app.patch('/api/reservation/update',async(req,res)=>{
+   await db.connectToServer(function(err){
+    let db_connect = db.getDb("worldcup22");
+   let myquery = { "matchNumber": Number(req.body.matchNumber)};
+let newvalues = {
+  $set: {
+    status:"RESERVED"
+  },
+};
+    db_connect
+   .collection("Reservations")
+   .updateOne(myquery, newvalues, function (err, res) {
+     if (err) throw err;
+     console.log("1 document updated for reservation");
+    // response.json(res);
+   })
+    return res.json({
+      message: 'Ticket Reservation Successful',
+    
+    });
+    })
 })
 
 // If request doesn't match any of the above routes then return 404
