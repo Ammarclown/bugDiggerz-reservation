@@ -51,43 +51,6 @@ app.post('/api/reservation', async (req, res) => {
         tickets: req.body.tickets,
       }
     });
-
-    // Perform Stripe Payment Flow
-    // try {
-    //   const token = await stripe.tokens.create({
-    //     card: {
-    //       number: req.body.card.number,
-    //       exp_month: req.body.card.expirationMonth,
-    //       exp_year: req.body.card.expirationYear,
-    //       cvc: req.body.card.cvc,
-    //     },
-    //   });
-    //   await stripe.charges.create({
-    //     amount: req.body.tickets.quantity * req.body.tickets.price,
-    //     currency: 'usd',
-    //     source: token.id,
-    //     description: 'FIFA World Cup Ticket Reservation',
-    //   });
-    //   await sendKafkaMessage(messagesType.TICKET_RESERVED, {
-    //     meta: { action: messagesType.TICKET_RESERVED },
-    //     body: {
-    //       matchNumber: req.body.matchNumber,
-    //       tickets: req.body.tickets,
-    //     }
-    //   });
-    // } catch (stripeError) {
-    //   // Send cancellation message indicating ticket sale failed
-    //   await sendKafkaMessage(messagesType.TICKET_CANCELLED, {
-    //     meta: { action: messagesType.TICKET_CANCELLED },
-    //     body: {
-    //       matchNumber: req.body.matchNumber,
-    //       tickets: req.body.tickets,
-    //     }
-    //   });
-    //   return res.status(400).send(`could not process payment: ${stripeError.message}`);
-    // }
-
-    // Persist ticket sale in database with a generated reference id so user can lookup ticket
     const ticketReservation = {
       id: v4(),
       email: req.body.email,
@@ -96,6 +59,17 @@ app.post('/api/reservation', async (req, res) => {
       quantity: req.body.tickets.quantity,
       price: req.body.tickets.price,
     };
+    await db.connectToServer(function(err){
+      let db_connect = db.getDb("worldcup22");
+      db_connect.collection("Reservations").insertOne(ticketReservation, function (err, res) {
+        if (err) throw err;
+        //response.json(res);
+      });
+      return res.json({
+        message: 'Ticket PENDING Successful',
+        
+      });
+    })
     //await db('reservations').insert(ticketReservation);
 
     // Return success response to client
@@ -103,10 +77,7 @@ app.post('/api/reservation', async (req, res) => {
     //   message: 'Ticket Purchase Successful',
     //   ...ticketReservation,
     // });
-    return res.json({
-        message: 'Ticket PENDING Successful',
-        
-      });
+    
   } catch (e) {
     return res.status(400).send(e.message);
   }
