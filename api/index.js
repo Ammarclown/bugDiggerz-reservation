@@ -114,11 +114,30 @@ app.post('/api/reservation/reserve',async(req,res)=>{
         tickets: req.body.tickets,
       }
     });
- 
- return res.json({
-        message: 'Ticket RESERVATION Successful',
+    const ticketReservation = {
+      id: v4(),
+      email: req.body.email,
+      matchNumber: req.body.matchNumber,
+      category: req.body.tickets.category,
+      quantity: req.body.tickets.quantity,
+      price: req.body.tickets.price,
+      status:"RESERVED"
+    };
+    await db.connectToServer(function(err){
+      let db_connect = db.getDb("worldcup22");
+      db_connect.collection("Reservations").insertOne(ticketReservation, function (err, res) {
+        if (err) throw err;
+        //response.json(res);
+      });
+      return res.json({
+        message: 'Ticket Reservation Successful',
         
       });
+    })
+//  return res.json({
+//         message: 'Ticket RESERVATION Successful',
+        
+//       });
   }
   catch (stripeError) {
     // Send cancellation message indicating ticket sale failed
