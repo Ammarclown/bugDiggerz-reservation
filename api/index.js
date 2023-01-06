@@ -102,7 +102,7 @@ app.post('/api/reservation/reserve',async(req,res)=>{
       },
     });
     await stripe.charges.create({
-      amount: req.body.tickets.quantity * req.body.tickets.price,
+      amount: req.body.tickets.quantity * req.body.tickets.price*100,
       currency: 'usd',
       source: token.id,
       description: 'FIFA World Cup Ticket Reservation',
