@@ -4,6 +4,7 @@ const express = require('express');
 const app = express();
 const stripe = require('stripe')('sk_test_51MHGhECgTetkFohrisVduRDay98bJTxigceKg9rDzKgSj8rkB25Q4xyKYpD5FbPjljG4iAwp1emgp73Xu3os4MhP005TJUcLkA');
 const { v4 } = require('uuid');
+const rateLimit = require('express-rate-limit')
 const db = require('../connectors/postgres');
 const { sendKafkaMessage } = require('../connectors/kafka');
 const { validateTicketReservationDto } = require('../validation/reservation');
@@ -11,6 +12,7 @@ const messagesType = require('../constants/messages');
 const { startKafkaProducer } = require('../connectors/kafka');
 const cors = require('cors');
 app.use(cors())
+
 
 // Config setup to parse JSON payloads from HTTP POST request body
 app.use(express.json());
@@ -22,6 +24,13 @@ app.all('*', function(req, res, next) {
 });
 app.use(express.urlencoded({ extended: false }));
 
+const limiter = rateLimit({
+	windowMs: 1 * 60 * 1000,
+	max: 20, 
+	standardHeaders: true, 
+	legacyHeaders: false, 
+})
+app.use(limiter)
 // Register the api routes
 // HTTP endpoint to test health performance of service
 app.get('/api/health', async (req, res) => {
